@@ -68,6 +68,12 @@
                     <tei:item>Added documentation of the ornamentation features to the guidelines.</tei:item>
                 </tei:list>
             </tei:change>
+            <tei:change status="unreleased" who="Niels Pfeffer">
+                <tei:list>
+                    <tei:item>Added elements <tei:gi>movementMap</tei:gi> and <tei:gi>movement</tei:gi> for encoding continuous movements of the performer, such as the piano's sustain and una corda pedals.</tei:item>
+                    <tei:item>Added documentation of the movement features to the guidelines.</tei:item>
+                </tei:list>
+            </tei:change>
         </tei:revisionDesc>
     </tei:teiHeader>
     
@@ -83,6 +89,7 @@
                     <tei:item>Dynamics features: macro dynamics (incl. discrete and continuous dynamics changes), metrical accentuation, random/non-systematical deviations from precise dynamics,</tei:item>
                     <tei:item>Articulation: absolute and relative modifications of a tone's duration, dynamics, timing (e.g. agogic accent), and intonation, random/non-systematic variations of tone duration and intonation,</tei:item>
                     <tei:item>Ornamentation: temporal spread (e.g. of arpeggiated chords), dynamics gradients of ornaments.</tei:item>
+                    <tei:item>Movement: continuous movements of the performer (incl. constant positions and continuous transitions), e.g. the piano's sustain and una corda pedals.</tei:item>
                 </tei:list>
                 
                 <tei:p>Each feature is designed on the basis of a mathematical model that was derived from empirical research. These models not only reproduce the typical characteristics of their respective features. Two musicians may perform the same features (say an articulation, a crescendo, or a ritardando) very differently. Thus, the models are also equipped with expressive parameters to recreate the whole bandwidth of such variations.</tei:p>
@@ -652,6 +659,45 @@
             </tei:div>
             
             <tei:div type="chapter">
+                <tei:head>Movement</tei:head>
+                
+                <tei:p>Some performance features are neither timing nor dynamics, nor do they belong to a single note. They are movements of the performer that continue over many notes and shape the sound as a whole. The most prominent example is the piano's sustain pedal, followed by the una corda (soft) pedal. MPM describes such movements in the <tei:gi>dated</tei:gi> environment's <tei:gi>movementMap</tei:gi>. Like the dynamics curve, a movement is a curve over symbolic time, composed of <tei:gi>movement</tei:gi> instructions. Each instruction either holds a constant position or performs a continuous transition towards a target position.</tei:p>
+                
+                <egXML xmlns="http://www.tei-c.org/ns/Examples">
+                    <movementMap>
+                        <movement date="0.0" controller="sustain" position="0.0" transition.to="0.85"/>
+                        <movement date="120.0" controller="sustain" position="0.85"/>
+                        <movement date="2760.0" controller="sustain" transition.to="0.3"/>
+                        <movement date="2850.0" controller="sustain" transition.to="0.85"/>
+                        <movement date="2940.0" controller="sustain" position="0.85"/>
+                        <movement date="5640.0" controller="sustain" transition.to="0.0" curvature="0.2"/>
+                        <movement date="5760.0" controller="sustain" position="0.0"/>
+                    </movementMap>
+                </egXML>
+                
+                <tei:p>In the above example, the sustain pedal is pressed to 85% of its travel during the first 120 ticks and held there. At date 2760.0 it is lifted to 30% and immediately pressed again (a so-called half change, which clears the sound only partially), before it is finally released at the end. Attribute <tei:att>position</tei:att> gives the position at <tei:att>date</tei:att>. For the piano pedals, 0.0 is the rest position and 1.0 the fully depressed pedal. Intermediate values are explicitly intended: pianists hold the pedal at partial depths (half pedalling), and the depth to which the pedal is pressed varies from stroke to stroke. If <tei:att>position</tei:att> is omitted, the movement starts where the preceding movement of the same controller ended.</tei:p>
+                
+                <tei:p>If <tei:att>transition.to</tei:att> is present, the movement is a continuous transition from <tei:att>position</tei:att> to the target value, which is reached at the date of the subsequent <tei:gi>movement</tei:gi> of the same controller. Hence, a transition should always be followed by another movement instruction. The shape of the transition is refined by attributes <tei:att>curvature</tei:att> and <tei:att>protraction</tei:att>. They are defined and constructed as for continuous dynamics transitions (see section "Macro Dynamics"). Only the default of <tei:att>curvature</tei:att> differs: it is 0.4, i.e. a sigmoidal shape, because physical movements accelerate and decelerate. Non-monotonic movements, such as the half change above, are composed of a sequence of monotonic transitions.</tei:p>
+                
+                <tei:p>Attribute <tei:att>controller</tei:att> names the movement. The predefined values are "sustain" (default), "soft" and "sostenuto". All controllers of a part share one <tei:gi>movementMap</tei:gi>. Each controller forms its own curve: a <tei:gi>movement</tei:gi> lasts until the next <tei:gi>movement</tei:gi> with the same <tei:att>controller</tei:att>, and movements of other controllers in between do not interrupt it. In the following example, the una corda is pressed slowly while the sustain pedal changes.</tei:p>
+                
+                <egXML xmlns="http://www.tei-c.org/ns/Examples">
+                    <movementMap>
+                        <movement date="0.0" controller="soft" position="0.0" transition.to="1.0" protraction="-0.5"/>
+                        <movement date="0.0" controller="sustain" position="1.0"/>
+                        <movement date="720.0" controller="sustain" transition.to="0.0"/>
+                        <movement date="780.0" controller="sustain" transition.to="1.0"/>
+                        <movement date="840.0" controller="sustain" position="1.0"/>
+                        <movement date="1440.0" controller="soft" position="1.0"/>
+                    </movementMap>
+                </egXML>
+                
+                <tei:p>The list of controllers is open. The same mechanism can describe other movements of the performer that can be expressed as a single position over time, e.g. the height of a pianist's wrist, a head movement, or the bow position of a string player. Such controllers should also use the interval [0.0, 1.0] with 0.0 as the rest position, unless the application defines a different scale.</tei:p>
+                
+                <tei:p>MPM encodes the movement, not its acoustic effect. Where exactly the dampers of a piano start to lift, for instance, depends on the instrument. It is up to the rendering engine to map the positions to sound. For expressive MIDI output, the piano pedals are typically rendered as MIDI control change messages (controller 64 for sustain, 67 for soft, 66 for sostenuto) with the position scaled to the range 0 to 127. Like other maps, the <tei:gi>movementMap</tei:gi> can be placed in the <tei:gi>global</tei:gi> environment, where it applies to all parts that have no local <tei:gi>movementMap</tei:gi>.</tei:p>
+            </tei:div>
+            
+            <tei:div type="chapter">
                 <tei:head>Randomization</tei:head>
                 
                 <tei:p>Anyone who has ever tried to analyze a musical performance by measuring the audio recording knows that quite a substantial amount of variations in timing, dynamics etc. exhibits a rather unsystematic behavior. This can hardly be emulated by the feature models described so far. On the one hand, this is an interesting indication that can help musical performance researchers to identify new and relevant research questions, investigate these phenomena systematically and develop new models that could be added to MPM. On the other hand, MPM needs to provide a way to recreate these phenomena now, at least in an approximate fashion, for those who simply want to create rich expressive performances for their music production.</tei:p>
@@ -849,6 +895,8 @@
                         <xinclude:include href="specs/dynamics.xml"/>
                     <xinclude:include href="specs/metricalAccentuationMap.xml"/>
                         <xinclude:include href="specs/accentuationPattern.xml"/>
+                    <xinclude:include href="specs/movementMap.xml"/>
+                        <xinclude:include href="specs/movement.xml"/>
                     <xinclude:include href="specs/ornamentationMap.xml"/>
                         <xinclude:include href="specs/ornament.xml"/>
                     <xinclude:include href="specs/tempoMap.xml"/>

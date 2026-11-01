@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-model href="https://tei-c.org/release/xml/tei/custom/schema/relaxng/tei_odds.rng" type="application/xml" schematypens="http://relaxng.org/ns/structure/1.0"?>
+<?xml-model href="https://tei-c.org/release/xml/tei/custom/schema/relaxng/tei_odds.rng" type="application/xml" schematypens="http://purl.oclc.org/dsdl/schematron"?>
+<tei:elementSpec ident="movement" module="mpm.core" mode="add" ns="http://www.cemfi.de/mpm/ns/1.0"
+    xmlns:tei="http://www.tei-c.org/ns/1.0"
+    xmlns:schematron="http://purl.oclc.org/dsdl/schematron">
+    <tei:gloss>movement</tei:gloss>
+
+    <tei:desc>A movement instruction. It specifies the position of one controller, e.g. a piano pedal, either as a constant or as a continuous transition towards a target position.</tei:desc>
+
+    <tei:classes>
+        <tei:memberOf key="att.time.symbolic.date"/>
+        <tei:memberOf key="att.id"/>
+    </tei:classes>
+
+    <tei:content>
+        <tei:empty/>
+    </tei:content>
+
+    <tei:constraintSpec ident="pedal_positions_normalized" scheme="schematron">
+        <tei:gloss>normalized pedal positions constraint</tei:gloss>
+        <tei:desc>The positions of the piano pedals (controllers sustain, soft and sostenuto) are normalized to the interval [0.0, 1.0].</tei:desc>
+        <tei:constraint>
+            <schematron:rule context="mpm:movement[not(attribute::controller) or attribute::controller = ('sustain', 'soft', 'sostenuto')]/attribute::*[local-name() = ('position', 'transition.to')]">
+                <schematron:assert test="number(.) ge 0.0 and number(.) le 1.0">
+                    @<schematron:value-of select="local-name()"/>="<schematron:value-of select="string()"/>" is out of range. The positions of the piano pedals must be in the interval [0.0, 1.0].
+                </schematron:assert>
+            </schematron:rule>
+        </tei:constraint>
+    </tei:constraintSpec>
+
+    <tei:attList>
+        <tei:attDef ident="controller" usage="opt">
+            <tei:gloss>controller</tei:gloss>
+            <tei:desc>The movement that this instruction refers to, e.g. one of the piano pedals. All <tei:gi>movement</tei:gi> elements with the same <tei:att>controller</tei:att> in a <tei:gi>movementMap</tei:gi> form one continuous curve.</tei:desc>
+            <tei:datatype>
+                <tei:dataRef name="NCName"/>
+            </tei:datatype>
+            <tei:defaultVal>sustain</tei:defaultVal>
+            <tei:valList type="semi">
+                <tei:valItem ident="sustain">
+                    <tei:desc>The piano's sustain (damper) pedal.</tei:desc>
+                </tei:valItem>
+                <tei:valItem ident="soft">
+                    <tei:desc>The piano's soft (una corda) pedal.</tei:desc>
+                </tei:valItem>
+                <tei:valItem ident="sostenuto">
+                    <tei:desc>The piano's sostenuto pedal.</tei:desc>
+                </tei:valItem>
+            </tei:valList>
+            <tei:remarks>
+                <tei:p>The list is open. Further names can be used to encode other movements of the performer, e.g. the height of a pianist's wrist, a head movement, or the bow position of a string player. The pedal names correspond to the values of MEI's <tei:att>func</tei:att> on <tei:gi>pedal</tei:gi>.</tei:p>
+            </tei:remarks>
+        </tei:attDef>
+
+        <tei:attDef ident="position" usage="opt">
+            <tei:gloss>position</tei:gloss>
+            <tei:desc>The position of the controller at <tei:att>date</tei:att>. For the piano pedals, 0.0 is the rest position (pedal released) and 1.0 the fully depressed pedal; intermediate values express partial depths, e.g. half pedalling.</tei:desc>
+            <tei:datatype>
+                <tei:dataRef name="double"/>
+            </tei:datatype>
+            <tei:remarks>
+                <tei:p>If omitted, the movement starts where the preceding movement of the same controller ended, i.e. at that movement's <tei:att>transition.to</tei:att> or, if it is constant, at its <tei:att>position</tei:att>. If there is no preceding movement of the same controller, the position is 0.0.</tei:p>
+                <tei:p>Controllers other than the piano pedals should also use the interval [0.0, 1.0], with 0.0 as the rest position, unless the application defines a different scale.</tei:p>
+            </tei:remarks>
+        </tei:attDef>
+
+        <tei:attDef ident="transition.to" usage="opt">
+            <tei:gloss>target position</tei:gloss>
+            <tei:desc>If this attribute is specified, the instruction represents a continuous transition from <tei:att>position</tei:att> to the target position given here. The target is reached at the <tei:att>date</tei:att> of the subsequent <tei:gi>movement</tei:gi> with the same <tei:att>controller</tei:att>. If omitted, the position is constant until then.</tei:desc>
+            <tei:datatype>
+                <tei:dataRef name="double"/>
+            </tei:datatype>
+        </tei:attDef>
+
+        <tei:attDef ident="curvature" usage="opt">
+            <tei:gloss>sigmoidal curvature of the transition</tei:gloss>
+            <tei:desc>If attribute <tei:att>transition.to</tei:att> is specified, the shape of the transition can be further refined by this attribute. Its value in the interval [0.0; 1.0] indicates a distinct sigmoidal (S) shape of the movement (value &gt; 0.0) or a straight linear transition (value = 0.0). The curve is constructed in the same way as that of a continuous <tei:gi>dynamics</tei:gi> transition.</tei:desc>
+            <tei:datatype>
+                <tei:dataRef name="double">
+                    <tei:dataFacet name="minInclusive" value="0.0"/>
+                    <tei:dataFacet name="maxInclusive" value="1.0"/>
+                </tei:dataRef>
+            </tei:datatype>
+            <tei:defaultVal>0.4</tei:defaultVal>
+            <tei:remarks>
+                <tei:p>The default differs from that of <tei:gi>dynamics</tei:gi> (0.0) because physical movements such as pedal strokes accelerate and decelerate; they are rarely linear.</tei:p>
+            </tei:remarks>
+        </tei:attDef>
+
+        <tei:attDef ident="protraction" usage="opt">
+            <tei:gloss>asymmetry of the transition</tei:gloss>
+            <tei:desc>If attribute <tei:att>transition.to</tei:att> is specified, the shape of the transition can be further refined by this attribute. Its value in the interval [-1.0; 1.0] indicates whether the movement happens relatively early (value &lt; 0.0), relatively late (value &gt; 0.0) or is equally shared between first and second half of the interval between <tei:att>date</tei:att> and the subsequent movement's <tei:att>date</tei:att>.</tei:desc>
+            <tei:datatype>
+                <tei:dataRef name="double">
+                    <tei:dataFacet name="minInclusive" value="-1.0"/>
+                    <tei:dataFacet name="maxInclusive" value="1.0"/>
+                </tei:dataRef>
+            </tei:datatype>
+            <tei:defaultVal>0.0</tei:defaultVal>
+        </tei:attDef>
+    </tei:attList>
+
+    <tei:exemplum>
+        <tei:p>A constant, fully depressed sustain pedal; a quick release of the sustain pedal; a press to half depth that is then held (half pedal); and a slow una corda that is pressed late to 70% of its travel.</tei:p>
+        <egXML xmlns="http://www.tei-c.org/ns/Examples">
+            <movement date="0.0" controller="sustain" position="1.0"/>
+            <movement date="1440.0" controller="sustain" transition.to="0.0" curvature="0.3"/>
+            <movement date="1560.0" controller="sustain" transition.to="0.5"/>
+            <movement date="1680.0" controller="sustain" position="0.5"/>
+            <movement date="2880.0" controller="soft" position="0.0" transition.to="0.7" protraction="0.6"/>
+            <movement date="4320.0" controller="soft" position="0.7"/>
+        </egXML>
+    </tei:exemplum>
+
+    <tei:remarks>
+        <tei:p>The movement instruction starts at the specified <tei:att>date</tei:att> and ends at the <tei:att>date</tei:att> of the subsequent movement instruction with the same <tei:att>controller</tei:att>. Within this time interval the position is either constant, monotonically increasing or monotonically decreasing. Non-monotonic movements (e.g. a pedal that is partly lifted and pressed again) are composed of a sequence of multiple <tei:gi>movement</tei:gi> elements. A transition should always be followed by another movement instruction of the same controller, as that provides its end date.</tei:p>
+    </tei:remarks>
+
+    <tei:remarks>
+        <tei:p>MPM encodes the movement, not its acoustic effect. Where, for instance, the dampers of a piano start to lift depends on the instrument. It is up to the rendering engine to map positions to sound, e.g. to MIDI controller 64 (sustain), 67 (soft) or 66 (sostenuto) scaled to the range 0 to 127.</tei:p>
+    </tei:remarks>
+</tei:elementSpec>
